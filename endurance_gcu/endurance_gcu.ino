@@ -1,133 +1,170 @@
-// #include <Servo.h>
-// #include "max6675.h"
+#include <Servo.h>
+#include "max6675.h"
 
-// // vars for fill pump (12V DC motor)
-// const int enA = 4; // speed
-// const int in1 = 5; // direction 1
-// const int in2 = 6; // direction 2
+class Thermocouple {
+  public:
+    Thermocouple(int SO, int CS, int SCK):
+      thermo(SCK, CS, SO) {}
 
-// // vars for flow sensor
-// const int sensorPin = 2; // flow sensor signal pin
-// volatile int pulseCount = 0; // pulse count
-// unsigned long lastTime = 0; // time of last sample
-// const unsigned long samplingInterval = 1000; // sampling interval: 1 sec
-// float flowRate = 0.0; // flow rate in mL/s
-// const float calibrationFactor = 1.0; // pulse per mL
-// const float keroseneDensity = 0.82; // kerosene density for mass flow rate calc
+    float getTemp() {
+      float temp = thermo.readCelsius();
+      delay(250);
+      return temp;
+    }
 
-// // vars for engine
-// Servo esc;
-// const int escPin = 7;
+    MAX6675 thermo;
+};
 
-// vars for thermocouple
-// int thermoDO = 3;
-// int thermoCS = 10;
-// int thermoCLK = 13;
+class Pump {
+  public:
+    Pump(int enA, int in1, int in2):
+      enA(enA),
+      in1(in1),
+      in2(in2) {}
 
-// MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
+    void start() {
+      pinMode(enA, OUTPUT);
+      pinMode(in1, OUTPUT);
+	    pinMode(in2, OUTPUT);
+    }
 
-// void setup() {
-//   Serial.begin(9600);
-//   delay(500);
-// }
+    void run(int speed) {
+      analogWrite(enA, speed);
+      digitalWrite(in1, HIGH);
+      digitalWrite(in2, LOW);
+    }
 
-// void loop() {
-//   Serial.print("C = ");
-//   Serial.println(thermocouple.readCelsius());
-//   delay(250);
-// }
+    void stop() {
+      digitalWrite(in1, LOW);
+      digitalWrite(in2, LOW);
+    }
 
+  private:
+    int enA;
+    int in1;
+    int in2;
+};
 
-// // vars for shutoff/propane
-// Servo shutoff;
-// void setup() {
-//   shutoff.attach(8);
-// }
+class Flow {
+  public:
 
-// void loop() {
-//   shutoff.write(90);
-//   delay(1000);
-//   shutoff.write(180);
-//   delay(1000);
-//   shutoff.write(0);
-//   delay(1000);
-// }
+    Flow(int flowPin, unsigned long samplingInterval, float calibrationFactor, float density):
+      flowPin(flowPin),
+      samplingInterval(samplingInterval),
+      calibrationFactor(calibrationFactor),
+      density(density),
+      lastTime(0),
+      flowRate(0.0) {}
 
-// void setup() {
-//   esc.attach(escPin);
-//   Serial.begin(9600);
+    static void pulse() {
+      pulseCount++;
+    }
 
-//   esc.writeMicroseconds(1000);
-//   delay(2000);
-// }
+    void start() {
+      pinMode(flowPin, INPUT);
+      attachInterrupt(digitalPinToInterrupt(flowPin), pulse, FALLING);
+    }
 
-// void loop() {
-//   // Increase throttle
-//   for (int speed = 1000; speed <= 2000; speed += 10) {
-//     esc.writeMicroseconds(speed);
-//     Serial.println(speed);
-//     delay(50);
-//   }
+    float getFlow() {
+      if (millis() - lastTime >= samplingInterval) {
+        detachInterrupt(digitalPinToInterrupt(flowPin));
 
-//   // Decrease throttle
-//   for (int speed = 2000; speed >= 1000; speed -= 10) {
-//     esc.writeMicroseconds(speed);
-//     Serial.println(speed);
-//     delay(50);
-//   }
-// }
+        flowRate = (float)pulseCount / (samplingInterval / 1000.0); // mL per sec
 
-// void setup() {
-//   pinMode(enA, OUTPUT);
-//   pinMode(in1, OUTPUT);
-// 	 pinMode(in2, OUTPUT);
-// }
+        // reset pulse count and timer
+        pulseCount = 0;
+        lastTime = millis();
 
-// void loop() {
-//   direction();
-//   delay(1000);
-// }
+        attachInterrupt(digitalPinToInterrupt(flowPin), pulse, FALLING);
 
-// void direction(){
-//   analogWrite(enA, 255);
-//   digitalWrite(in1, HIGH);
-//   digitalWrite(in2, LOW);
-//   delay(2000);
+        return flowRate;
+      }
+      return flowRate;
+    }
 
-//   digitalWrite(in1, LOW);
-// 	digitalWrite(in2, LOW);
-// }
+    float getMassFlow() {
+        return getFlow() * density;
+    }
 
-// void pulseCounter() {
-//   pulseCount++;
-// }
+  private:
+    int flowPin;
+    volatile static int pulseCount;
+    unsigned long lastTime;
+    unsigned long samplingInterval;
+    float flowRate;
+    float calibrationFactor;
+    float density;
+};
 
-// void setup() {
-//   pinMode(sensorPin, INPUT);
-//   attachInterrupt(digitalPinToInterrupt(sensorPin), pulseCounter, FALLING);
-//   Serial.begin(9600);
-// }
+class Shutoff {
+  public:
+    Shutoff(int shutoffPin):
+      shutoffPin(shutoffPin) {}
+    
+    void start() {
+      shutoff.attach(shutoffPin);
+    }
 
-// void loop() {
-//   if (millis() - lastTime >= samplingInterval) {
-//     detachInterrupt(digitalPinToInterrupt(sensorPin));
+    void rotate(int degrees) {
+      shutoff.write(degrees);
+      delay(1000);
+    }
 
-//     // Calculate flow rate in mL/s
-//     flowRate = (float)pulseCount / (samplingInterval / 1000.0); // mL per second
+  private:
+    int shutoffPin;  
+    Servo shutoff;
+};
 
-//     // Print the flow rate
-//     Serial.print("Flow rate: ");
-//     Serial.print(flowRate * 60, 2); // Display with two decimal places
-//     Serial.println(" mL/min");
+class Engine {
+  public: 
+    Engine(int escPin):
+      escPin(escPin){}
+    
+    void start() {
+      esc.attach(escPin);
+      esc.writeMicroseconds(1000);
+    }
 
-//     Serial.print("Mass Flow Rate: ");
-//     Serial.print(flowRate * 60 * keroseneDensity, 3);
-//     Serial.println(" g/min");
+    void run(int speed) {
+      esc.writeMicroseconds(speed);
+      delay(50);
+    }
 
-//     // Reset pulse count and timer
-//     pulseCount = 0;
-//     lastTime = millis();
+  private:
+    Servo esc;
+    int escPin;
+};
 
-//     attachInterrupt(digitalPinToInterrupt(sensorPin), pulseCounter, FALLING);
-//   }
-// }
+Thermocouple therm(3, 10, 13);
+Pump pump(4, 5, 6);
+Flow flow(2, 1000, 1.0, 0.82);
+Shutoff shutoff(8);
+Engine engine(7);
+
+volatile int Flow::pulseCount = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pump.start();
+  flow.start();
+  shutoff.start();
+  engine.start();
+}
+
+void loop() {
+  // Integration Tests
+  Serial.println("Celsius: " + String(therm.getTemp()));
+
+  pump.run(255);
+  pump.stop();
+
+  Serial.println("FLow Rate " + String(flow.getFlow()));
+  Serial.println("Mass Flow Rate: " + String(flow.getMassFlow()));
+
+  shutoff.rotate(90);
+  shutoff.rotate(0);
+
+  for (int i = 1000; i <= 2000; i+=10) {
+    engine.run(i);
+  }
+}
