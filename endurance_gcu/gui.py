@@ -9,23 +9,24 @@ from collections import deque
 import sys
 
 # Configure Serial Communication
-arduino = serial.Serial('COM18', 9600, timeout=1)  # Adjust 'COM18' to match your Arduino's port.
+arduino = serial.Serial('COM18', 9600, timeout=1)
 
 # Data Storage for Plotting
-therm_data = deque([0]*50, maxlen=50)  # Store the last 50 temperature readings
+therm_data = deque([0]*60, maxlen=60)  # Store the last 60 temperature readings
+weight_data = deque([0]*60, maxlen=60)  # Store the last 60 weight readings
 
 # Flag to stop the thread
 stop_thread = False
 
 # Function to read data from Arduino
 def read_from_arduino():
-    while not stop_thread:  # Continuously check the stop flag
+    while not stop_thread:
         if arduino.in_waiting > 0:
             line = arduino.readline().decode('utf-8').strip()
             if line.startswith("TEMP:"):
                 temp = float(line.split(':')[1])
                 therm_label_var.set(f"Thermocouple: {temp}°C")
-                therm_data.append(temp)  # Add new data to the plot
+                therm_data.append(temp)
             elif line.startswith("PUMP:"):
                 pump_label_var.set(f"Pump Speed: {line.split(':')[1]}")
             elif line.startswith("ENGINE:"):
@@ -36,7 +37,7 @@ def read_from_arduino():
                 propane_label_var.set(f"Propane Angle: {line.split(':')[1]}°")
             elif line.startswith("WEIGHT:"):
                 weight = float(line.split(':')[1])
-                weight_label_var.set(f"Weight: {weight} g")  # Update the weight label
+                weight_label_var.set(f"Weight: {weight} g")
 
 # Function to update the thermocouple plot
 def update_plot():
@@ -47,13 +48,21 @@ def update_plot():
     ax.set_ylabel("Temperature (°C)")
     ax.legend()
     ax.grid(True)
+
+    ax1.clear()
+    ax1.plot(list(weight_data), color='blue', label='Weight (g)')
+    ax1.set_title("Real-time Weight Data")
+    ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Weight (g)")
+    ax1.legend()
+    ax1.grid(True)
     
     # Adjust layout to prevent labels from being cut off
     fig.tight_layout()
     
     canvas.draw()  # Redraw the plot
     if not stop_thread:
-        root.after(100, update_plot)  # Refresh the plot every 100 ms if not stopping
+        root.after(100, update_plot)  # Refresh the plot every 100 ms
 
 # Function to send pump speed to Arduino
 def set_pump_speed(val):
@@ -94,8 +103,8 @@ weight_label_var = tk.StringVar(value="Weight: N/A")
 weight_label = tk.Label(info_frame, textvariable=weight_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
 weight_label.grid(row=1, column=0, sticky="w", pady=5)
 
-# Add the Thermocouple Plot below the labels
-fig, ax = plt.subplots(figsize=(5, 3))
+# Add the plots below the labels
+fig, (ax, ax1) = plt.subplots(2, 1, figsize=(5, 6))
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas_widget = canvas.get_tk_widget()
 canvas_widget.pack(pady=10)

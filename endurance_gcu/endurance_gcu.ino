@@ -29,10 +29,9 @@ class Pump {
     }
 
     void run(int speed) {
-      // Ensure speed is between 0 and 100
       speed = constrain(speed, 0, 100);
       currentSpeed = speed;
-      analogWrite(enA, map(speed, 0, 100, 0, 255)); // Map to PWM range
+      analogWrite(enA, map(speed, 0, 100, 0, 255));
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
     }
@@ -141,40 +140,30 @@ void setup() {
 }
 
 void loop() {
+  // Read command from GUI and extract control inputs
   if (Serial.available()) {
-    String command = Serial.readStringUntil('\n');  // Read command from GUI
+    String command = Serial.readStringUntil('\n');
     if (command.startsWith("PUMP:")) {
-      int speed = command.substring(5).toInt();    // Extract pump speed
+      int speed = command.substring(5).toInt();
       pump.run(speed);
     } else if (command.startsWith("ENGINE:")) {
-      int speed = command.substring(7).toInt();    // Extract engine speed
+      int speed = command.substring(7).toInt();
       engine.run(speed);
     } else if (command.startsWith("SHUTOFF:")) {
-      int angle = command.substring(8).toInt();    // Extract shutoff angle
+      int angle = command.substring(8).toInt();
       shutoff.rotate(angle);
     } else if (command.startsWith("PROPANE:")) {
-      int angle = command.substring(8).toInt();    // Extract propane angle
+      int angle = command.substring(8).toInt();
       propane.rotate(angle);
     }
   }
 
-  // Send the thermocouple temperature to GUI
-  Serial.println("TEMP:" + String(therm.getTemp(), 2)); // Send temperature with 2 decimal places
-
-  // Send the current pump speed to GUI
-  Serial.println("PUMP:" + String(pump.getSpeed())); // Assuming you have a getSpeed() method for the pump
-  
-  // Send the current engine speed to GUI
-  Serial.println("ENGINE:" + String(engine.getSpeed())); // Assuming you have a getSpeed() method for the engine
-  
-  // Send the current shutoff angle to GUI
-  Serial.println("SHUTOFF:" + String(shutoff.getAngle())); // Assuming you have a getAngle() method for shutoff
-  
-  // Send the current propane angle to GUI
-  Serial.println("PROPANE:" + String(propane.getAngle())); // Assuming you have a getAngle() method for propane
-
-  // Send the current weight to GUI
-  Serial.println("WEIGHT:" + String(weight.getWeight())); // Send weight
-
-  delay(100); // Delay to avoid flooding the serial port
+  // Send status of components to GUI
+  Serial.println("TEMP:" + String(therm.getTemp(), 2));
+  Serial.println("PUMP:" + String(pump.getSpeed()));
+  Serial.println("ENGINE:" + String(engine.getSpeed()));
+  Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
+  Serial.println("PROPANE:" + String(propane.getAngle()));
+  Serial.println("WEIGHT:" + String(weight.getWeight()));
+  delay(100);
 }
