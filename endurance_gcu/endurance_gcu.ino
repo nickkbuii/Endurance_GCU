@@ -8,7 +8,6 @@ class Thermocouple {
 
     float getTemp() {
       float temp = thermo.readCelsius();
-      delay(250);
       return temp;
     }
 
@@ -29,90 +28,54 @@ class Pump {
     }
 
     void run(int speed) {
-      analogWrite(enA, speed);
+      // Ensure speed is between 0 and 100
+      speed = constrain(speed, 0, 100);
+      currentSpeed = speed;
+      analogWrite(enA, map(speed, 0, 100, 0, 255)); // Map to PWM range
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
     }
+    
 
     void stop() {
       digitalWrite(in1, LOW);
       digitalWrite(in2, LOW);
     }
 
+    int getSpeed() {
+      return currentSpeed;
+    }
+
   private:
     int enA;
     int in1;
     int in2;
+    int currentSpeed;
 };
 
-class Flow {
+class ServoMotor {
   public:
-
-    Flow(int flowPin, unsigned long samplingInterval, float calibrationFactor, float density):
-      flowPin(flowPin),
-      samplingInterval(samplingInterval),
-      calibrationFactor(calibrationFactor),
-      density(density),
-      lastTime(0),
-      flowRate(0.0) {}
-
-    static void pulse() {
-      pulseCount++;
-    }
-
-    void start() {
-      pinMode(flowPin, INPUT);
-      attachInterrupt(digitalPinToInterrupt(flowPin), pulse, FALLING);
-    }
-
-    float getFlow() {
-      if (millis() - lastTime >= samplingInterval) {
-        detachInterrupt(digitalPinToInterrupt(flowPin));
-
-        flowRate = (float)pulseCount / (samplingInterval / 1000.0); // mL per sec
-
-        // reset pulse count and timer
-        pulseCount = 0;
-        lastTime = millis();
-
-        attachInterrupt(digitalPinToInterrupt(flowPin), pulse, FALLING);
-
-        return flowRate;
-      }
-      return flowRate;
-    }
-
-    float getMassFlow() {
-        return getFlow() * density;
-    }
-
-  private:
-    int flowPin;
-    volatile static int pulseCount;
-    unsigned long lastTime;
-    unsigned long samplingInterval;
-    float flowRate;
-    float calibrationFactor;
-    float density;
-};
-
-class Shutoff {
-  public:
-    Shutoff(int shutoffPin):
-      shutoffPin(shutoffPin) {}
+    ServoMotor(int servoPin):
+      servoPin(servoPin) {}
     
     void start() {
-      shutoff.attach(shutoffPin);
+      servo.attach(servoPin);
     }
 
     void rotate(int degrees) {
-      shutoff.write(degrees);
-      delay(1000);
+      degrees = constrain(degrees, 0, 180);
+      currentAngle = degrees;
+      servo.write(degrees);
+    }
+
+    int getAngle() {
+      return currentAngle;
     }
 
   private:
-    int shutoffPin;  
-    Servo shutoff;
+    int servoPin;  
+    Servo servo;
+    int currentAngle;
 };
 
 class Engine {
@@ -126,45 +89,68 @@ class Engine {
     }
 
     void run(int speed) {
+      speed = constrain(speed, 1000, 2000);
+      currentSpeed = speed;
       esc.writeMicroseconds(speed);
-      delay(50);
     }
+
+    int getSpeed() {
+      return currentSpeed;
+    }
+
 
   private:
     Servo esc;
     int escPin;
+    int currentSpeed;
 };
 
 Thermocouple therm(3, 10, 13);
 Pump pump(4, 5, 6);
-Flow flow(2, 1000, 1.0, 0.82);
-Shutoff shutoff(8);
 Engine engine(7);
-
-volatile int Flow::pulseCount = 0;
+ServoMotor shutoff(8);
+ServoMotor propane(9);
 
 void setup() {
   Serial.begin(9600);
   pump.start();
-  flow.start();
-  shutoff.start();
   engine.start();
+  shutoff.start();
+  propane.start();
 }
 
 void loop() {
-  // Integration Tests
-  Serial.println("Celsius: " + String(therm.getTemp()));
-
-  pump.run(255);
-  pump.stop();
-
-  Serial.println("FLow Rate " + String(flow.getFlow()));
-  Serial.println("Mass Flow Rate: " + String(flow.getMassFlow()));
-
-  shutoff.rotate(90);
-  shutoff.rotate(0);
-
-  for (int i = 1000; i <= 2000; i+=10) {
-    engine.run(i);
+  if (Serial.available()) {
+    String command = Serial.readStringUntil('\n');  // Read command from GUI
+    if (command.startsWith("PUMP:")) {
+      int speed = command.substring(5).toInt();    // Extract pump speed
+      pump.run(speed);
+    } else if (command.startsWith("ENGINE:")) {
+      int speed = command.substring(7).toInt();    // Extract engine speed
+      engine.run(speed);
+    } else if (command.startsWith("SHUTOFF:")) {
+      int angle = command.substring(8).toInt();    // Extract shutoff angle
+      shutoff.rotate(angle);
+    } else if (command.startsWith("PROPANE:")) {
+      int angle = command.substring(8).toInt();    // Extract propane angle
+      propane.rotate(angle);
+    }
   }
+
+  // Send the thermocouple temperature to GUI
+  Serial.println("TEMP:" + String(therm.getTemp(), 2)); // Send temperature with 2 decimal places
+
+  // Send the current pump speed to GUI
+  Serial.println("PUMP:" + String(pump.getSpeed())); // Assuming you have a getSpeed() method for the pump
+  
+  // Send the current engine speed to GUI
+  Serial.println("ENGINE:" + String(engine.getSpeed())); // Assuming you have a getSpeed() method for the engine
+  
+  // Send the current shutoff angle to GUI
+  Serial.println("SHUTOFF:" + String(shutoff.getAngle())); // Assuming you have a getAngle() method for shutoff
+  
+  // Send the current propane angle to GUI
+  Serial.println("PROPANE:" + String(propane.getAngle())); // Assuming you have a getAngle() method for propane
+
+  delay(100); // Delay to avoid flooding the serial port
 }

@@ -1,73 +1,161 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 import serial
 import threading
-import time
+from collections import deque
+import sys
 
-# Connect to Arduino
-try:
-    arduino = serial.Serial('COM3', 9600, timeout=1)  # Replace 'COM3' with your Arduino's port
-except Exception as e:
-    messagebox.showerror("Error", f"Could not connect to Arduino: {e}")
-    arduino = None
+# Configure Serial Communication
+arduino = serial.Serial('COM18', 9600, timeout=1)  # Adjust 'COM18' to match your Arduino's port.
 
-# GUI Functions
-def send_servo_command():
-    if arduino:
-        try:
-            angle = int(servo_angle_entry.get())
-            if 0 <= angle <= 180:
-                command = f"SERVO:{angle}\n"
-                arduino.write(command.encode())
-            else:
-                messagebox.showerror("Error", "Servo angle must be between 0 and 180")
-        except ValueError:
-            messagebox.showerror("Error", "Invalid servo angle")
+# Data Storage for Plotting
+therm_data = deque([0]*50, maxlen=50)  # Store the last 50 temperature readings
 
-def read_arduino_data():
-    if arduino:
-        while True:
-            try:
-                data = arduino.readline().decode().strip()
-                if data.startswith("TEMP:"):
-                    temperature = data[5:]
-                    temperature_label.config(text=f"Temperature: {temperature} °C")
-            except Exception as e:
-                print(f"Error reading from Arduino: {e}")
-                break
+# Flag to stop the thread
+stop_thread = False
 
-# Start data reading in a separate thread
-def start_reading():
-    read_thread = threading.Thread(target=read_arduino_data)
-    read_thread.daemon = True
-    read_thread.start()
+# Function to read data from Arduino
+def read_from_arduino():
+    while not stop_thread:  # Continuously check the stop flag
+        if arduino.in_waiting > 0:
+            line = arduino.readline().decode('utf-8').strip()
+            if line.startswith("TEMP:"):
+                temp = float(line.split(':')[1])
+                therm_label_var.set(f"Thermocouple: {temp}°C")
+                therm_data.append(temp)  # Add new data to the plot
+            elif line.startswith("PUMP:"):
+                pump_label_var.set(f"Pump Speed: {line.split(':')[1]}")
+            elif line.startswith("ENGINE:"):
+                engine_label_var.set(f"Engine Speed: {line.split(':')[1]}")
+            elif line.startswith("SHUTOFF:"):
+                shutoff_label_var.set(f"Shutoff Angle: {line.split(':')[1]}°")
+            elif line.startswith("PROPANE:"):
+                propane_label_var.set(f"Propane Angle: {line.split(':')[1]}°")
 
-# Close the application
-def on_closing():
-    if arduino:
-        arduino.close()
-    root.destroy()
+# Function to update the thermocouple plot
+def update_plot():
+    ax.clear()
+    ax.plot(list(therm_data), color='red', label='Temperature (°C)')
+    ax.set_title("Real-time Thermocouple Data")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Temperature (°C)")
+    ax.legend()
+    ax.grid(True)
+    
+    # Adjust layout to prevent labels from being cut off
+    fig.tight_layout()
+    
+    canvas.draw()  # Redraw the plot
+    if not stop_thread:
+        root.after(100, update_plot)  # Refresh the plot every 100 ms if not stopping
 
-# GUI Setup
+# Function to send pump speed to Arduino
+def set_pump_speed(val):
+    speed = int(val)
+    arduino.write(f"PUMP:{speed}\n".encode('utf-8'))
+
+# Function to send engine speed to Arduino
+def set_engine_speed(val):
+    speed = int(val)
+    arduino.write(f"ENGINE:{speed}\n".encode('utf-8'))
+
+# Function to set shutoff servo angle
+def set_shutoff_angle(val):
+    angle = int(float(val))
+    arduino.write(f"SHUTOFF:{angle}\n".encode('utf-8'))
+
+# Function to set propane servo angle
+def set_propane_angle(val):
+    angle = int(float(val))
+    arduino.write(f"PROPANE:{angle}\n".encode('utf-8'))
+
+# --- GUI Setup ---
 root = tk.Tk()
 root.title("Arduino Controller")
+root.geometry("800x600")
+root.config(bg="#F0F0F0")  # Set background color
 
-# Servo Control
-servo_frame = tk.Frame(root)
-servo_frame.pack(pady=10)
+# Frame for displaying labels
+info_frame = ttk.Frame(root, padding="20")
+info_frame.pack(pady=10)
 
-tk.Label(servo_frame, text="Servo Angle (0-180):").pack(side=tk.LEFT)
-servo_angle_entry = tk.Entry(servo_frame)
-servo_angle_entry.pack(side=tk.LEFT, padx=5)
-tk.Button(servo_frame, text="Set Angle", command=send_servo_command).pack(side=tk.LEFT)
+# Labels to display data with better font and color
+therm_label_var = tk.StringVar(value="Thermocouple: N/A")
+therm_label = tk.Label(info_frame, textvariable=therm_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
+therm_label.grid(row=0, column=0, sticky="w", pady=5)
 
-# Temperature Display
-temperature_label = tk.Label(root, text="Temperature: N/A", font=("Arial", 14))
-temperature_label.pack(pady=20)
+# Add the Thermocouple Plot below the labels
+fig, ax = plt.subplots(figsize=(5, 3))
+canvas = FigureCanvasTkAgg(fig, master=root)
+canvas_widget = canvas.get_tk_widget()
+canvas_widget.pack(pady=10)
 
-# Handle close event
-root.protocol("WM_DELETE_WINDOW", on_closing)
+pump_label_var = tk.StringVar(value="Pump Speed: N/A")
+pump_label = tk.Label(info_frame, textvariable=pump_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
+pump_label.grid(row=1, column=0, sticky="w", pady=5)
 
-# Start the GUI and serial reading
-start_reading()
+engine_label_var = tk.StringVar(value="Engine Speed: N/A")
+engine_label = tk.Label(info_frame, textvariable=engine_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
+engine_label.grid(row=2, column=0, sticky="w", pady=5)
+
+shutoff_label_var = tk.StringVar(value="Shutoff Angle: N/A")
+shutoff_label = tk.Label(info_frame, textvariable=shutoff_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
+shutoff_label.grid(row=3, column=0, sticky="w", pady=5)
+
+propane_label_var = tk.StringVar(value="Propane Angle: N/A")
+propane_label = tk.Label(info_frame, textvariable=propane_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
+propane_label.grid(row=4, column=0, sticky="w", pady=5)
+
+# Frame for controls (joystick-like scales for pump and engine)
+controls_frame = ttk.Frame(root, padding="20")
+controls_frame.pack(pady=20)
+
+# Add joystick-like control for pump speed
+def create_joystick_control(label_text, command, row):
+    ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5)
+    scale = tk.Scale(controls_frame, from_=0, to=100, orient="horizontal", length=300, tickinterval=20, command=command)
+    scale.set(0)  # Default neutral position
+    scale.grid(row=row, column=1, padx=10, pady=5)
+    return scale
+
+# Create joystick controls for pump and engine
+pump_scale = create_joystick_control("Pump Speed", lambda val: set_pump_speed(val), 5)
+engine_scale = create_joystick_control("Engine Speed", lambda val: set_engine_speed(val), 6)
+
+# Create sliders for servo control (Shutoff and Propane)
+def create_angle_control(label_text, command, row):
+    ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5)
+    scale = tk.Scale(controls_frame, from_=0, to=180, orient="horizontal", length=300, tickinterval=20, command=command)
+    scale.set(90)  # Default position at 90 degrees (neutral position)
+    scale.grid(row=row, column=1, padx=10, pady=5)
+    return scale
+
+# Create sliders for shutoff and propane servo angles
+shutoff_angle_scale = create_angle_control("Shutoff Servo Angle", lambda val: set_shutoff_angle(val), 7)
+propane_angle_scale = create_angle_control("Propane Servo Angle", lambda val: set_propane_angle(val), 8)
+
+# Start a thread to continuously read from Arduino
+def start_thread():
+    global stop_thread
+    stop_thread = False
+    thread = threading.Thread(target=read_from_arduino, daemon=True)
+    thread.start()
+
+# Start updating the plot and the thread
+def on_closing():
+    global stop_thread
+    stop_thread = True  # Set stop flag to True
+    arduino.close()  # Close serial connection properly
+    root.destroy()  # Close the Tkinter window
+    sys.exit()  # Terminate the program
+
+root.protocol("WM_DELETE_WINDOW", on_closing)  # Bind the close button to on_closing
+
+start_thread()  # Start the Arduino reading thread
+update_plot()  # Start updating the plot
+
+# Run the GUI
 root.mainloop()
