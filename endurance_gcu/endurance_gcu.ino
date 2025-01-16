@@ -1,5 +1,6 @@
 #include <Servo.h>
 #include "max6675.h"
+#include "HX711.h"
 
 class Thermocouple {
   public:
@@ -105,6 +106,26 @@ class Engine {
     int currentSpeed;
 };
 
+class Weight {
+  public:
+    Weight(int DATA, int SCK) {
+      scale.begin(DATA, SCK);
+      scale.set_scale();
+      scale.tare();
+    }
+
+    long getWeight() {
+      long weight = scale.get_units(5);
+      currentWeight = weight;
+      return weight;
+    }
+
+  private:
+    HX711 scale;
+    long currentWeight;
+};
+
+Weight weight(2, 13);
 Thermocouple therm(3, 10, 13);
 Pump pump(4, 5, 6);
 Engine engine(7);
@@ -151,6 +172,9 @@ void loop() {
   
   // Send the current propane angle to GUI
   Serial.println("PROPANE:" + String(propane.getAngle())); // Assuming you have a getAngle() method for propane
+
+  // Send the current weight to GUI
+  Serial.println("WEIGHT:" + String(weight.getWeight())); // Send weight
 
   delay(100); // Delay to avoid flooding the serial port
 }

@@ -34,6 +34,9 @@ def read_from_arduino():
                 shutoff_label_var.set(f"Shutoff Angle: {line.split(':')[1]}°")
             elif line.startswith("PROPANE:"):
                 propane_label_var.set(f"Propane Angle: {line.split(':')[1]}°")
+            elif line.startswith("WEIGHT:"):
+                weight = float(line.split(':')[1])
+                weight_label_var.set(f"Weight: {weight} g")  # Update the weight label
 
 # Function to update the thermocouple plot
 def update_plot():
@@ -87,6 +90,10 @@ therm_label_var = tk.StringVar(value="Thermocouple: N/A")
 therm_label = tk.Label(info_frame, textvariable=therm_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
 therm_label.grid(row=0, column=0, sticky="w", pady=5)
 
+weight_label_var = tk.StringVar(value="Weight: N/A")
+weight_label = tk.Label(info_frame, textvariable=weight_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
+weight_label.grid(row=1, column=0, sticky="w", pady=5)
+
 # Add the Thermocouple Plot below the labels
 fig, ax = plt.subplots(figsize=(5, 3))
 canvas = FigureCanvasTkAgg(fig, master=root)
@@ -95,19 +102,19 @@ canvas_widget.pack(pady=10)
 
 pump_label_var = tk.StringVar(value="Pump Speed: N/A")
 pump_label = tk.Label(info_frame, textvariable=pump_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
-pump_label.grid(row=1, column=0, sticky="w", pady=5)
+pump_label.grid(row=2, column=0, sticky="w", pady=5)
 
 engine_label_var = tk.StringVar(value="Engine Speed: N/A")
 engine_label = tk.Label(info_frame, textvariable=engine_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
-engine_label.grid(row=2, column=0, sticky="w", pady=5)
+engine_label.grid(row=3, column=0, sticky="w", pady=5)
 
 shutoff_label_var = tk.StringVar(value="Shutoff Angle: N/A")
 shutoff_label = tk.Label(info_frame, textvariable=shutoff_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
-shutoff_label.grid(row=3, column=0, sticky="w", pady=5)
+shutoff_label.grid(row=4, column=0, sticky="w", pady=5)
 
 propane_label_var = tk.StringVar(value="Propane Angle: N/A")
 propane_label = tk.Label(info_frame, textvariable=propane_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
-propane_label.grid(row=4, column=0, sticky="w", pady=5)
+propane_label.grid(row=5, column=0, sticky="w", pady=5)
 
 # Frame for controls (joystick-like scales for pump and engine)
 controls_frame = ttk.Frame(root, padding="20")
