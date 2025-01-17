@@ -29,9 +29,11 @@ class Pump {
     }
 
     void run(int speed) {
-      speed = constrain(speed, 0, 100);
+      // speed = constrain(speed, 0, 100);
       currentSpeed = speed;
-      analogWrite(enA, map(speed, 0, 100, 0, 255));
+      speed = (speed / 100) * 255;
+      // analogWrite(enA, map(speed, 0, 100, 0, 255));
+      analogWrite(enA, speed);
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
     }
@@ -89,8 +91,9 @@ class Engine {
     }
 
     void run(int speed) {
-      speed = constrain(speed, 1000, 2000);
+      // speed = constrain(speed, 1000, 2000);
       currentSpeed = speed;
+      speed = (1 + (1.0*speed/100)) * 1000;
       esc.writeMicroseconds(speed);
     }
 
@@ -159,7 +162,7 @@ void loop() {
   }
 
   // Send status of components to GUI
-  Serial.println("TEMP:" + String(therm.getTemp(), 2));
+  Serial.println("TEMP:" + String(therm.getTemp()));
   Serial.println("PUMP:" + String(pump.getSpeed()));
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));

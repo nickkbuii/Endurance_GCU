@@ -9,7 +9,7 @@ from collections import deque
 import sys
 
 # Configure Serial Communication
-arduino = serial.Serial('COM18', 9600, timeout=1)
+arduino = serial.Serial('COM15', 9600, timeout=1)
 
 # Data Storage for Plotting
 therm_data = deque([0]*60, maxlen=60)  # Store the last 60 temperature readings
@@ -28,9 +28,9 @@ def read_from_arduino():
                 therm_label_var.set(f"Thermocouple: {temp}°C")
                 therm_data.append(temp)
             elif line.startswith("PUMP:"):
-                pump_label_var.set(f"Pump Speed: {line.split(':')[1]}")
+                pump_label_var.set(f"Pump Speed: {line.split(':')[1]}%")
             elif line.startswith("ENGINE:"):
-                engine_label_var.set(f"Engine Speed: {line.split(':')[1]}")
+                engine_label_var.set(f"Engine Speed: {line.split(':')[1]}%")
             elif line.startswith("SHUTOFF:"):
                 shutoff_label_var.set(f"Shutoff Angle: {line.split(':')[1]}°")
             elif line.startswith("PROPANE:"):
