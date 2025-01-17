@@ -135,8 +135,10 @@ def save_data_to_csv():
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Arduino Controller")
-root.geometry("800x600")
+root.geometry("1000x800")  # Adjust to a larger size if needed
+root.resizable(True, True)  # Allow resizing
 root.config(bg="#F0F0F0")
+
 
 # Frame for displaying labels
 info_frame = ttk.Frame(root, padding="20")
