@@ -140,6 +140,7 @@ ServoMotor propane(9);
 
 void setup() {
   Serial.begin(9600);
+  analogWriteResolution(8); // Set PWM resolution to 16 bits
   pump.start();
   engine.start();
   shutoff.start();

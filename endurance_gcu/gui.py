@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import serial
 import threading
 from collections import deque
+import csv
+from datetime import datetime
 import sys
 
 # Configure Serial Communication
@@ -15,31 +17,55 @@ arduino = serial.Serial('COM15', 9600, timeout=1)
 therm_data = deque([0]*60, maxlen=60)  # Store the last 60 temperature readings
 weight_data = deque([0]*60, maxlen=60)  # Store the last 60 weight readings
 
+# List to store all data for saving
+# Format: [time, temperature, weight, pump, engine, shutoff_angle, propane_angle]
+data_log = []
+time_counter = 0  # Time counter for CSV logging (seconds)
+
 # Flag to stop the thread
 stop_thread = False
 
 # Function to read data from Arduino
 def read_from_arduino():
+    global time_counter
     while not stop_thread:
         if arduino.in_waiting > 0:
             line = arduino.readline().decode('utf-8').strip()
+            data_entry = [time_counter, None, None, None, None, None, None]  # Initialize a new entry
+
             if line.startswith("TEMP:"):
                 temp = float(line.split(':')[1])
                 therm_label_var.set(f"Thermocouple: {temp}°C")
                 therm_data.append(temp)
+                data_entry[1] = temp
             elif line.startswith("PUMP:"):
-                pump_label_var.set(f"Pump Speed: {line.split(':')[1]}%")
+                pump_speed = int(line.split(':')[1])
+                pump_label_var.set(f"Pump Speed: {pump_speed}%")
+                data_entry[3] = pump_speed
             elif line.startswith("ENGINE:"):
-                engine_label_var.set(f"Engine Speed: {line.split(':')[1]}%")
+                engine_speed = int(line.split(':')[1])
+                engine_label_var.set(f"Engine Speed: {engine_speed}%")
+                data_entry[4] = engine_speed
             elif line.startswith("SHUTOFF:"):
-                shutoff_label_var.set(f"Shutoff Angle: {line.split(':')[1]}°")
+                shutoff_angle = int(line.split(':')[1])
+                shutoff_label_var.set(f"Shutoff Angle: {shutoff_angle}°")
+                data_entry[5] = shutoff_angle
             elif line.startswith("PROPANE:"):
-                propane_label_var.set(f"Propane Angle: {line.split(':')[1]}°")
+                propane_angle = int(line.split(':')[1])
+                propane_label_var.set(f"Propane Angle: {propane_angle}°")
+                data_entry[6] = propane_angle
             elif line.startswith("WEIGHT:"):
                 weight = float(line.split(':')[1])
                 weight_label_var.set(f"Weight: {weight} g")
+                weight_data.append(weight)
+                data_entry[2] = weight
 
-# Function to update the thermocouple plot
+            # Append to data log if at least one field is filled
+            if any(data_entry[1:]):
+                data_log.append(data_entry)
+                time_counter += 1
+
+# Function to update the plots
 def update_plot():
     ax.clear()
     ax.plot(list(therm_data), color='red', label='Temperature (°C)')
@@ -56,13 +82,12 @@ def update_plot():
     ax1.set_ylabel("Weight (g)")
     ax1.legend()
     ax1.grid(True)
-    
-    # Adjust layout to prevent labels from being cut off
+
     fig.tight_layout()
-    
-    canvas.draw()  # Redraw the plot
+    canvas.draw()
+
     if not stop_thread:
-        root.after(100, update_plot)  # Refresh the plot every 100 ms
+        root.after(100, update_plot)
 
 # Function to send pump speed to Arduino
 def set_pump_speed(val):
@@ -90,17 +115,33 @@ def update_propane_angle(change):
     arduino.write(f"PROPANE:{current_propane_angle}\n".encode('utf-8'))
     propane_label_var.set(f"Propane Angle: {current_propane_angle}°")
 
+# Function to save data to CSV
+def save_data_to_csv():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"data_{timestamp}.csv"
+    try:
+        with open(filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                "Time (s)", "Temperature (°C)", "Weight (g)", 
+                "Pump Speed (%)", "Engine Speed (%)", 
+                "Shutoff Angle (°)", "Propane Angle (°)"
+            ])
+            writer.writerows(data_log)
+        messagebox.showinfo("Success", f"Data saved to {filename}")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to save data: {str(e)}")
+
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Arduino Controller")
 root.geometry("800x600")
-root.config(bg="#F0F0F0")  # Set background color
+root.config(bg="#F0F0F0")
 
 # Frame for displaying labels
 info_frame = ttk.Frame(root, padding="20")
 info_frame.pack(pady=10)
 
-# Labels to display data with better font and color
 therm_label_var = tk.StringVar(value="Thermocouple: N/A")
 therm_label = tk.Label(info_frame, textvariable=therm_label_var, font=("Arial", 14), bg="#F0F0F0", anchor="w")
 therm_label.grid(row=0, column=0, sticky="w", pady=5)
@@ -135,53 +176,90 @@ propane_label.grid(row=5, column=0, sticky="w", pady=5)
 controls_frame = ttk.Frame(root, padding="20")
 controls_frame.pack(pady=20)
 
-# Add joystick-like control for pump speed
 def create_joystick_control(label_text, command, row):
     ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5)
     scale = tk.Scale(controls_frame, from_=0, to=100, orient="horizontal", length=300, tickinterval=20, command=command)
-    scale.set(0)  # Default neutral position
+    scale.set(0)
     scale.grid(row=row, column=1, padx=10, pady=5)
     return scale
 
-# Create joystick controls for pump and engine
 pump_scale = create_joystick_control("Pump Speed", lambda val: set_pump_speed(val), 5)
 engine_scale = create_joystick_control("Engine Speed", lambda val: set_engine_speed(val), 6)
 
-# Function to create plus/minus button controls for servo angles
-def create_increment_buttons(label_text, update_command, row):
+# Function to set shutoff servo angle to a specific value
+def set_shutoff_to_angle(angle):
+    global current_shutoff_angle
+    current_shutoff_angle = max(0, min(180, angle))  # Ensure the angle is within bounds (0-180)
+    arduino.write(f"SHUTOFF:{current_shutoff_angle}\n".encode('utf-8'))
+    shutoff_label_var.set(f"Shutoff Angle: {current_shutoff_angle}°")
+
+# Function to create increment buttons along with 0 and 90 degree buttons
+def create_shutoff_buttons_with_preset(label_text, update_command, row):
     ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5, sticky="w")
     button_frame = ttk.Frame(controls_frame)
     button_frame.grid(row=row, column=1, pady=5)
 
-    minus_button = ttk.Button(button_frame, text="-", width=4, command=lambda: update_command(-5))
+    # Existing buttons for adjusting angle by +/- 10 degrees
+    minus_button = ttk.Button(button_frame, text="-", width=4, command=lambda: update_command(-10))
     minus_button.pack(side="left", padx=2)
 
-    plus_button = ttk.Button(button_frame, text="+", width=4, command=lambda: update_command(5))
+    plus_button = ttk.Button(button_frame, text="+", width=4, command=lambda: update_command(10))
     plus_button.pack(side="left", padx=2)
 
-# Add plus/minus controls for shutoff and propane servo angles
-create_increment_buttons("Shutoff Servo Angle", update_shutoff_angle, 7)
-create_increment_buttons("Propane Servo Angle", update_propane_angle, 8)
+    # New buttons for setting the angle to 0 and 90 degrees
+    zero_button = ttk.Button(button_frame, text="0°", width=4, command=lambda: set_shutoff_to_angle(0))
+    zero_button.pack(side="left", padx=2)
 
-# Start a thread to continuously read from Arduino
+    ninety_button = ttk.Button(button_frame, text="90°", width=4, command=lambda: set_shutoff_to_angle(90))
+    ninety_button.pack(side="left", padx=2)
+
+# Add the new buttons for Shutoff Servo Angle with 0° and 90° options
+create_shutoff_buttons_with_preset("Shutoff Servo Angle", update_shutoff_angle, 7)
+
+# Function to set propane servo angle to 75 degrees
+def set_propane_off():
+    global current_propane_angle
+    current_propane_angle = 75  # Set the propane angle to 75 degrees
+    arduino.write(f"PROPANE:{current_propane_angle}\n".encode('utf-8'))
+    propane_label_var.set(f"Propane Angle: {current_propane_angle}°")
+
+# Propane Servo Angle Controls with OFF Button
+def create_propane_buttons_with_off(label_text, update_command, off_command, row):
+    ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5, sticky="w")
+    button_frame = ttk.Frame(controls_frame)
+    button_frame.grid(row=row, column=1, pady=5)
+
+    minus_button = ttk.Button(button_frame, text="-", width=4, command=lambda: update_command(-10))
+    minus_button.pack(side="left", padx=2)
+
+    plus_button = ttk.Button(button_frame, text="+", width=4, command=lambda: update_command(10))
+    plus_button.pack(side="left", padx=2)
+
+    off_button = ttk.Button(button_frame, text="OFF", width=4, command=off_command)
+    off_button.pack(side="left", padx=2)
+
+# Add buttons for Propane Servo Angle with OFF option
+create_propane_buttons_with_off("Propane Servo Angle", update_propane_angle, set_propane_off, 8)
+
+save_button = ttk.Button(controls_frame, text="Save Data", command=save_data_to_csv)
+save_button.grid(row=9, column=0, columnspan=2, pady=10)
+
 def start_thread():
     global stop_thread
     stop_thread = False
     thread = threading.Thread(target=read_from_arduino, daemon=True)
     thread.start()
 
-# Start updating the plot and the thread
 def on_closing():
     global stop_thread
-    stop_thread = True  # Set stop flag to True
-    arduino.close()  # Close serial connection properly
-    root.destroy()  # Close the Tkinter window
-    sys.exit()  # Terminate the program
+    stop_thread = True
+    arduino.close()
+    root.destroy()
+    sys.exit()
 
-root.protocol("WM_DELETE_WINDOW", on_closing)  # Bind the close button to on_closing
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
-start_thread()  # Start the Arduino reading thread
-update_plot()  # Start updating the plot
+start_thread()
+update_plot()
 
-# Run the GUI
 root.mainloop()
