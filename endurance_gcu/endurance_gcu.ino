@@ -30,10 +30,8 @@ class Pump {
     }
 
     void run(int speed) {
-      // speed = constrain(speed, 0, 100);
       currentSpeed = speed;
       speed = (1.0 * speed / 100) * 255;
-      // analogWrite(enA, map(speed, 0, 100, 0, 255));
       analogWrite(enA, speed);
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
@@ -92,7 +90,6 @@ class Engine {
     }
 
     void run(int speed) {
-      // speed = constrain(speed, 1000, 2000);
       currentSpeed = speed;
       speed = (1 + (1.0*speed/100)) * 1000;
       esc.writeMicroseconds(speed);
@@ -113,7 +110,7 @@ class Weight {
   public:
     Weight(int DATA, int SCK) {
       scale.begin(DATA, SCK);
-      scale.set_scale(7050);  // Add a calibration factor
+      scale.set_scale(7050);  // calibration factor
       scale.tare();
     }
 
@@ -140,7 +137,7 @@ ServoMotor propane(9);
 
 void setup() {
   Serial.begin(9600);
-  analogWriteResolution(8); // Set PWM resolution to 16 bits
+  analogWriteResolution(8);
   pump.start();
   engine.start();
   shutoff.start();
