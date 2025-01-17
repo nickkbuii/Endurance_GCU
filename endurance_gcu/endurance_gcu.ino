@@ -9,6 +9,7 @@ class Thermocouple {
 
     float getTemp() {
       float temp = thermo.readCelsius();
+      delay(250);
       return temp;
     }
 
@@ -31,7 +32,7 @@ class Pump {
     void run(int speed) {
       // speed = constrain(speed, 0, 100);
       currentSpeed = speed;
-      speed = (speed / 100) * 255;
+      speed = (1.0 * speed / 100) * 255;
       // analogWrite(enA, map(speed, 0, 100, 0, 255));
       analogWrite(enA, speed);
       digitalWrite(in1, HIGH);
@@ -112,22 +113,25 @@ class Weight {
   public:
     Weight(int DATA, int SCK) {
       scale.begin(DATA, SCK);
-      scale.set_scale();
+      scale.set_scale(7050);  // Add a calibration factor
       scale.tare();
     }
 
-    long getWeight() {
-      long weight = scale.get_units(5);
-      currentWeight = weight;
-      return weight;
+    float getWeight() {
+      if (scale.is_ready()) {
+        float weight = scale.get_units(5);
+        return weight;
+      } else {
+        Serial.println("WEIGHT NOT READY");
+        return 0;
+      }
     }
 
   private:
     HX711 scale;
-    long currentWeight;
 };
 
-Weight weight(2, 13);
+Weight weight(2, 45);
 Thermocouple therm(3, 10, 13);
 Pump pump(4, 5, 6);
 Engine engine(7);

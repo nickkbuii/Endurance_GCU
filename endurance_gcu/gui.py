@@ -75,14 +75,20 @@ def set_engine_speed(val):
     arduino.write(f"ENGINE:{speed}\n".encode('utf-8'))
 
 # Function to set shutoff servo angle
-def set_shutoff_angle(val):
-    angle = int(float(val))
-    arduino.write(f"SHUTOFF:{angle}\n".encode('utf-8'))
+current_shutoff_angle = 0  # Default angle for shutoff servo
+def update_shutoff_angle(change):
+    global current_shutoff_angle
+    current_shutoff_angle = max(0, min(180, current_shutoff_angle + change))
+    arduino.write(f"SHUTOFF:{current_shutoff_angle}\n".encode('utf-8'))
+    shutoff_label_var.set(f"Shutoff Angle: {current_shutoff_angle}°")
 
 # Function to set propane servo angle
-def set_propane_angle(val):
-    angle = int(float(val))
-    arduino.write(f"PROPANE:{angle}\n".encode('utf-8'))
+current_propane_angle = 0  # Default angle for propane servo
+def update_propane_angle(change):
+    global current_propane_angle
+    current_propane_angle = max(0, min(180, current_propane_angle + change))
+    arduino.write(f"PROPANE:{current_propane_angle}\n".encode('utf-8'))
+    propane_label_var.set(f"Propane Angle: {current_propane_angle}°")
 
 # --- GUI Setup ---
 root = tk.Tk()
@@ -141,17 +147,21 @@ def create_joystick_control(label_text, command, row):
 pump_scale = create_joystick_control("Pump Speed", lambda val: set_pump_speed(val), 5)
 engine_scale = create_joystick_control("Engine Speed", lambda val: set_engine_speed(val), 6)
 
-# Create sliders for servo control (Shutoff and Propane)
-def create_angle_control(label_text, command, row):
-    ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5)
-    scale = tk.Scale(controls_frame, from_=0, to=180, orient="horizontal", length=300, tickinterval=20, command=command)
-    scale.set(90)  # Default position at 90 degrees (neutral position)
-    scale.grid(row=row, column=1, padx=10, pady=5)
-    return scale
+# Function to create plus/minus button controls for servo angles
+def create_increment_buttons(label_text, update_command, row):
+    ttk.Label(controls_frame, text=label_text, font=("Arial", 12)).grid(row=row, column=0, pady=5, sticky="w")
+    button_frame = ttk.Frame(controls_frame)
+    button_frame.grid(row=row, column=1, pady=5)
 
-# Create sliders for shutoff and propane servo angles
-shutoff_angle_scale = create_angle_control("Shutoff Servo Angle", lambda val: set_shutoff_angle(val), 7)
-propane_angle_scale = create_angle_control("Propane Servo Angle", lambda val: set_propane_angle(val), 8)
+    minus_button = ttk.Button(button_frame, text="-", width=4, command=lambda: update_command(-5))
+    minus_button.pack(side="left", padx=2)
+
+    plus_button = ttk.Button(button_frame, text="+", width=4, command=lambda: update_command(5))
+    plus_button.pack(side="left", padx=2)
+
+# Add plus/minus controls for shutoff and propane servo angles
+create_increment_buttons("Shutoff Servo Angle", update_shutoff_angle, 7)
+create_increment_buttons("Propane Servo Angle", update_propane_angle, 8)
 
 # Start a thread to continuously read from Arduino
 def start_thread():
