@@ -109,12 +109,12 @@ def save_data_to_csv():
                 "Pump Speed (%)", "Engine Speed (%)",
                 "Shutoff Angle (°)", "Propane Angle (°)", "Timestamp (PST)"
             ])
-            writer.writerows(data_log)  # Each entry already includes the PST timestamp
+            writer.writerows(data_log)
         messagebox.showinfo("Success", f"Data saved to {filename}")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to save data: {str(e)}")
 
-# --- GUI Setup ---
+# GUI Setup
 root = tk.Tk()
 root.title("Arduino Controller")
 root.geometry("2000x1000")  # Adjust to a larger size if needed
@@ -133,7 +133,6 @@ root.grid_columnconfigure(0, weight=3)  # Give more space to data
 root.grid_columnconfigure(1, weight=2)  # Give less space to controls
 root.grid_rowconfigure(0, weight=1)
 
-# --- Data Frame ---
 # Frame for displaying labels
 info_frame = ttk.Frame(data_frame, padding="10")
 info_frame.pack(side="top", fill="x", pady=10)
@@ -162,11 +161,10 @@ plot_frame = ttk.Frame(data_frame)
 plot_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
 
 # Creating Matplotlib plots
-fig, (ax, ax1) = plt.subplots(2, 1, figsize=(3, 2))  # Adjusted size for better scaling
+fig, (ax, ax1) = plt.subplots(2, 1, figsize=(3, 2))
 canvas = FigureCanvasTkAgg(fig, master=plot_frame)
 canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
 
-# --- Controls Frame ---
 # Create sliders for pump and engine speed
 def create_control(label, command, row):
     ttk.Label(controls_frame, text=label, font=("Arial", 12)).grid(row=row, column=0, sticky="w", padx=10)
@@ -221,7 +219,7 @@ create_propane_buttons(3)
 # Save Data Button
 ttk.Button(controls_frame, text="Save Data", command=save_data_to_csv).grid(row=4, column=0, columnspan=2, pady=20)
 
-# --- Start Threads and Main Loop ---
+# Start Threads and Main Loop
 def start_thread():
     global stop_thread
     stop_thread = False
