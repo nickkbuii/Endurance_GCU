@@ -9,9 +9,10 @@ from collections import deque
 import csv
 from datetime import datetime
 import sys
+from pytz import timezone
 
 # Configure Serial Communication
-arduino = serial.Serial('/dev/cu.usbmodem2101', 9600, timeout=1)
+arduino = serial.Serial('COM15', 9600, timeout=1)
 
 # Data Storage for Plotting
 therm_data = deque([0] * 60, maxlen=60)  # Store the last 60 temperature readings
@@ -25,16 +26,22 @@ stop_thread = False
 # Function to read data from Arduino
 def read_from_arduino():
     global time_counter
+    pst_tz = timezone("US/Pacific")
     while not stop_thread:
         if arduino.in_waiting > 0:
             line = arduino.readline().decode('utf-8').strip()
-            data_entry = [time_counter, None, None, None, None, None, None]
-
+            current_time = datetime.now(pst_tz).strftime("%Y-%m-%d %H:%M:%S")
+            data_entry = [time_counter, None, None, None, None, None, None, current_time]
             if line.startswith("TEMP:"):
                 temp = float(line.split(':')[1])
                 therm_label_var.set(f"Thermocouple: {temp}°C")
                 therm_data.append(temp)
                 data_entry[1] = temp
+            elif line.startswith("WEIGHT:"):
+                weight = float(line.split(':')[1])
+                weight_label_var.set(f"Weight: {weight} g")
+                weight_data.append(weight)
+                data_entry[2] = weight
             elif line.startswith("PUMP:"):
                 pump_speed = int(line.split(':')[1])
                 pump_label_var.set(f"Pump Speed: {pump_speed}%")
@@ -51,11 +58,6 @@ def read_from_arduino():
                 propane_angle = int(line.split(':')[1])
                 propane_label_var.set(f"Propane Angle: {propane_angle}°")
                 data_entry[6] = propane_angle
-            elif line.startswith("WEIGHT:"):
-                weight = float(line.split(':')[1])
-                weight_label_var.set(f"Weight: {weight} g")
-                weight_data.append(weight)
-                data_entry[2] = weight
 
             if any(data_entry[1:]):
                 data_log.append(data_entry)
@@ -95,7 +97,7 @@ def set_engine_speed(val):
     arduino.write(f"ENGINE:{speed}\n".encode('utf-8'))
     engine_label_var.set(f"Engine Speed: {speed}%")
 
-# Function to save data to CSV
+# Function to save data to CSV with recorded PST timestamps
 def save_data_to_csv():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"data_{timestamp}.csv"
@@ -105,9 +107,9 @@ def save_data_to_csv():
             writer.writerow([
                 "Time (s)", "Temperature (°C)", "Weight (g)",
                 "Pump Speed (%)", "Engine Speed (%)",
-                "Shutoff Angle (°)", "Propane Angle (°)"
+                "Shutoff Angle (°)", "Propane Angle (°)", "Timestamp (PST)"
             ])
-            writer.writerows(data_log)
+            writer.writerows(data_log)  # Each entry already includes the PST timestamp
         messagebox.showinfo("Success", f"Data saved to {filename}")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to save data: {str(e)}")

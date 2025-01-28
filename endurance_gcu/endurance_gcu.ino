@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include <Arduino.h>
 #include "max6675.h"
 #include "HX711.h"
 
@@ -108,16 +109,15 @@ class Engine {
 
 class Weight {
   public:
-    Weight(int DATA, int SCK) {
+    Weight(int DATA, int SCK, float CALIB_FACTOR) {
       scale.begin(DATA, SCK);
-      scale.set_scale(7050);  // calibration factor
+      scale.set_scale(CALIB_FACTOR);
       scale.tare();
     }
 
     float getWeight() {
       if (scale.is_ready()) {
-        float weight = scale.get_units(5);
-        return weight;
+        return scale.get_units();
       } else {
         Serial.println("WEIGHT NOT READY");
         return 0;
@@ -128,7 +128,7 @@ class Weight {
     HX711 scale;
 };
 
-Weight weight(2, 45);
+Weight weight(2, 45, 741.2608696);
 Thermocouple therm(3, 10, 13);
 Pump pump(4, 5, 6);
 Engine engine(7);
