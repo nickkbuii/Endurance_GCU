@@ -113,6 +113,9 @@ class Weight {
       scale.begin(DATA, SCK);
       scale.set_scale(CALIB_FACTOR);
       scale.tare();
+
+      lastWeight = scale.get_units();
+      lastTime = millis();
     }
 
     float getWeight() {
@@ -124,8 +127,22 @@ class Weight {
       }
     }
 
+    float getMassFlowRate() {
+      unsigned long currentTime = millis();
+      float currentWeight = getWeight();
+      float deltaWeight = currentWeight - lastWeight;
+      float deltaTime = (currentTime - lastTime) / 1000.0;
+
+      lastWeight = currentWeight;
+      lastTime = currentTime;
+
+      return (deltaTime > 0) ? (deltaWeight / deltaTime) : 0;
+    }
+
   private:
     HX711 scale;
+    float lastWeight;
+    unsigned long lastTime;
 };
 
 Weight weight(2, 45, 741.2608696);
