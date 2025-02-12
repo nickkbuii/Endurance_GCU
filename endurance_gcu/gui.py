@@ -12,7 +12,7 @@ import sys
 from pytz import timezone
 
 # Configure Serial Communication
-arduino = serial.Serial('COM4', 9600, timeout=1)
+arduino = serial.Serial('/dev/cu.usbmodem101', 9600, timeout=1)
 
 # Data Storage for Plotting
 therm_data = deque([0] * 60, maxlen=60)  # Store the last 60 temperature readings

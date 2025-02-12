@@ -133,6 +133,7 @@ class Weight {
       // float currentWeight = getWeight();
       for (int i = 0; i < sampling_interval; i++) {
         weight_sum += getWeight();
+        delay(10);
       }
       float currentWeight = weight_sum / sampling_interval;
       float deltaWeight = currentWeight - lastWeight;
@@ -190,6 +191,6 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("WEIGHT:" + String(weight.getMassFlowRate(20)));
+  Serial.println("WEIGHT:" + String(weight.getMassFlowRate(10)));
   delay(100);
 }
