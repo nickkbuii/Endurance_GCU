@@ -127,62 +127,16 @@ class Weight {
       }
     }
 
-    // float getMassFlowRate(int sampling_interval) {
-    //   unsigned long currentTime = millis();
-    //   float weight_sum = 0;
-    //   // float currentWeight = getWeight();
-    //   for (int i = 0; i < sampling_interval; i++) {
-    //     weight_sum += getWeight();
-    //     delay(10);
-    //   }
-    //   float currentWeight = weight_sum / sampling_interval;
-    //   float deltaWeight = currentWeight - lastWeight;
-    //   float deltaTime = abs(currentTime - lastTime) / 1000.0;
-
-    //   lastWeight = currentWeight;
-    //   lastTime = currentTime;
-
-    //   return (deltaTime > 0) ? (deltaWeight / deltaTime) : 0;
-    // }
-
-float getMassFlowRate(int sampling_interval) {
-    unsigned long currentTime = millis();
-    float weight_samples[sampling_interval];
-
-    // Collect weight samples
-    for (int i = 0; i < sampling_interval; i++) {
-        weight_samples[i] = getWeight();
-        delay(10);
+    float getMassFlowRate(int sampling_interval) {
+      unsigned long currentTime = millis();
+      float currentWeight = getWeight();
+      float deltaWeight = currentWeight - lastWeight;
+      float deltaTime = abs(currentTime - lastTime) / 1000.0;
+      lastWeight = currentWeight;
+      lastTime = currentTime;
+      delay(10);
+      return (deltaTime > 0) ? (deltaWeight / deltaTime) : 0;
     }
-
-    // Simple bubble sort for small sample sizes (Arduino-friendly)
-    for (int i = 0; i < sampling_interval - 1; i++) {
-        for (int j = 0; j < sampling_interval - i - 1; j++) {
-            if (weight_samples[j] > weight_samples[j + 1]) {
-                float temp = weight_samples[j];
-                weight_samples[j] = weight_samples[j + 1];
-                weight_samples[j + 1] = temp;
-            }
-        }
-    }
-
-    // Compute median
-    float currentWeight;
-    if (sampling_interval % 2 == 0) {
-        currentWeight = (weight_samples[sampling_interval / 2 - 1] + weight_samples[sampling_interval / 2]) / 2.0;
-    } else {
-        currentWeight = weight_samples[sampling_interval / 2];
-    }
-
-    float deltaWeight = currentWeight - lastWeight;
-    float deltaTime = abs(currentTime - lastTime) / 1000.0;
-
-    lastWeight = currentWeight;
-    lastTime = currentTime;
-
-    return (deltaTime > 0) ? (deltaWeight / deltaTime) : 0;
-}
-
 
   private:
     HX711 scale;
