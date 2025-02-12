@@ -127,9 +127,14 @@ class Weight {
       }
     }
 
-    float getMassFlowRate() {
+    float getMassFlowRate(int sampling_interval) {
       unsigned long currentTime = millis();
-      float currentWeight = getWeight();
+      float weight_sum = 0;
+      // float currentWeight = getWeight();
+      for (int i = 0; i < sampling_interval; i++) {
+        weight_sum += getWeight();
+      }
+      float currentWeight = weight_sum / sampling_interval;
       float deltaWeight = currentWeight - lastWeight;
       float deltaTime = abs(currentTime - lastTime) / 1000.0;
 
@@ -185,6 +190,6 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("WEIGHT:" + String(weight.getMassFlowRate()));
+  Serial.println("WEIGHT:" + String(weight.getMassFlowRate(20)));
   delay(100);
 }
