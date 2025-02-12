@@ -12,11 +12,11 @@ import sys
 from pytz import timezone
 
 # Configure Serial Communication
-arduino = serial.Serial('COM15', 9600, timeout=1)
+arduino = serial.Serial('COM4', 9600, timeout=1)
 
 # Data Storage for Plotting
 therm_data = deque([0] * 60, maxlen=60)  # Store the last 60 temperature readings
-weight_data = deque([0] * 60, maxlen=60)  # Store the last 60 weight readings
+weight_data = deque([0] * 60, maxlen=60)  # Store the last 60 mass flow rate readings
 
 # List to store all data for saving
 data_log = []
@@ -39,7 +39,7 @@ def read_from_arduino():
                 data_entry[1] = temp
             elif line.startswith("WEIGHT:"):
                 weight = float(line.split(':')[1])
-                weight_label_var.set(f"Weight: {weight} g")
+                weight_label_var.set(f"Mass Flow Rate: {weight} g/s")
                 weight_data.append(weight)
                 data_entry[2] = weight
             elif line.startswith("PUMP:"):
@@ -74,10 +74,10 @@ def update_plot():
     ax.grid(True)
 
     ax1.clear()
-    ax1.plot(list(weight_data), color='blue', label='Weight (g)')
-    ax1.set_title("Real-time Weight Data")
+    ax1.plot(list(weight_data), color='blue', label='Mass Flow Rate (g/s)')
+    ax1.set_title("Real-time Mass Flow Rate Data")
     ax1.set_xlabel("Time (s)")
-    ax1.set_ylabel("Weight (g)")
+    ax1.set_ylabel("Mass Flow Rate (g/s)")
     ax1.legend()
     ax1.grid(True)
 
@@ -105,7 +105,7 @@ def save_data_to_csv():
         with open(filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([
-                "Time (s)", "Temperature (°C)", "Weight (g)",
+                "Time (s)", "Temperature (°C)", "Mass Flow Rate (g/s)",
                 "Pump Speed (%)", "Engine Speed (%)",
                 "Shutoff Angle (°)", "Propane Angle (°)", "Timestamp (PST)"
             ])
@@ -141,7 +141,7 @@ info_frame.pack(side="top", fill="x", pady=10)
 therm_label_var = tk.StringVar(value="Thermocouple: N/A")
 ttk.Label(info_frame, textvariable=therm_label_var, font=("Arial", 14)).grid(row=0, column=0, sticky="w", padx=10)
 
-weight_label_var = tk.StringVar(value="Weight: N/A")
+weight_label_var = tk.StringVar(value="Mass Flow Rate: N/A")
 ttk.Label(info_frame, textvariable=weight_label_var, font=("Arial", 14)).grid(row=1, column=0, sticky="w", padx=10)
 
 pump_label_var = tk.StringVar(value="Pump Speed: N/A")

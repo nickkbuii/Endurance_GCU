@@ -114,7 +114,7 @@ class Weight {
       scale.set_scale(CALIB_FACTOR);
       scale.tare();
 
-      lastWeight = scale.get_units();
+      lastWeight = 0.0;
       lastTime = millis();
     }
 
@@ -131,7 +131,7 @@ class Weight {
       unsigned long currentTime = millis();
       float currentWeight = getWeight();
       float deltaWeight = currentWeight - lastWeight;
-      float deltaTime = (currentTime - lastTime) / 1000.0;
+      float deltaTime = abs(currentTime - lastTime) / 1000.0;
 
       lastWeight = currentWeight;
       lastTime = currentTime;
@@ -154,7 +154,6 @@ ServoMotor propane(9);
 
 void setup() {
   Serial.begin(9600);
-  analogWriteResolution(8);
   pump.start();
   engine.start();
   shutoff.start();
@@ -186,6 +185,6 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("WEIGHT:" + String(weight.getWeight()));
+  Serial.println("WEIGHT:" + String(weight.getMassFlowRate()));
   delay(100);
 }
