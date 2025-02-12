@@ -138,7 +138,6 @@ class Weight {
       float deltaTime = abs(currentTime - lastTime) / 1000.0;
       lastWeight = currentWeight;
       lastTime = currentTime;
-      delay(10);
       return (deltaTime > 0) ? (deltaWeight / deltaTime) : 0;
     }
 
