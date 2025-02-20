@@ -12,7 +12,7 @@ import sys
 from pytz import timezone
 
 # Configure Serial Communication
-arduino = serial.Serial('COM7', 9600, timeout=1) ## Nolan's Port: '/dev/cu.usbmodem101'
+arduino = serial.Serial('/dev/cu.usbmodem101', 9600, timeout=1) ## Nolan's Port: '/dev/cu.usbmodem101'
 
 def read_from_arduino():
     global time_counter
@@ -56,7 +56,7 @@ def read_from_arduino():
 def update_plot():
     ax.clear()
     ax.plot(list(therm_data), color='red', label='Temperature (°C)')
-    ax.set_title("Real-time Thermocouple Data")
+    ax.set_title("Real-time Temperature Data")
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Temperature (°C)")
     ax.legend()
