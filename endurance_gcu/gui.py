@@ -136,7 +136,7 @@ def create_propane_buttons(row):
     ttk.Button(button_frame, text="OFF", width=6, command=lambda: update_propane_angle(-current_propane_angle + 75)).pack(side="left", padx=5)
 
 def run_preset(type):
-    arduino.write(f"type\n".encode('utf-8'))
+    arduino.write(f"{type}\n".encode('utf-8'))
 
 def create_preset_buttons(row):
     ttk.Label(controls_frame, text="Presets:", font=("Arial", 12)).grid(row=row, column=0, sticky="w", padx=10)

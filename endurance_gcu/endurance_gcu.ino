@@ -163,9 +163,11 @@ void setup() {
   engine.start();
   shutoff.start();
   propane.start();
+  initializeActuators();
 }
 
 void loop() {
+
   // Read command from GUI and execute cooresponding action
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
@@ -202,19 +204,18 @@ void loop() {
   delay(100);
 }
 
+void initializeActuators() {
+  pump.run(0);
+  engine.run(0);
+  propane.rotate(75);
+}
+
 // PRESET: shutoff engine
 void engineShutoff() {
   propane.rotate(75);
   pump.run(0);
   engine.run(25);
   delay(3000);
-}
-
-// PRESET: initialize starting state for actuators
-void initializeActuators() {
-  pump.run(0);
-  engine.run(0);
-  propane.rotate(75);
 }
 
 // PRESET: engine pre-start
