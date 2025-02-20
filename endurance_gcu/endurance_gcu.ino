@@ -36,6 +36,7 @@ class Pump {
       analogWrite(enA, speed);
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
+      delay(300); // pump spin-up time
     }
     
 
@@ -68,6 +69,7 @@ class ServoMotor {
       degrees = constrain(degrees, 0, 180);
       currentAngle = degrees;
       servo.write(degrees);
+      delay(500); // servo rotation time
     }
 
     int getAngle() {
@@ -94,6 +96,7 @@ class Engine {
       currentSpeed = speed;
       speed = (1 + (1.0*speed/100)) * 1000;
       esc.writeMicroseconds(speed);
+      delay(1000); // ESC spin-up time
     }
 
     int getSpeed() {
@@ -135,7 +138,7 @@ class Weight {
       unsigned long currentTime = millis();
       float currentWeight = getWeight(5);
       float deltaWeight = currentWeight - lastWeight;
-      float deltaTime = abs(currentTime - lastTime) / 1000.0;
+      float deltaTime = (currentTime - lastTime) / 1000.0;
       lastWeight = currentWeight;
       lastTime = currentTime;
       return (deltaTime > 0) ? (deltaWeight / deltaTime) : 0;
@@ -189,4 +192,57 @@ void loop() {
   Serial.println("PROPANE:" + String(propane.getAngle()));
   Serial.println("WEIGHT:" + String(weight.getMassFlowRate()));
   delay(100);
+}
+
+// PRESET: shutoff engine
+void engineShutoff() {
+  propane.rotate(75);
+  pump.run(0);
+  engine.run(25);
+  delay(3000);
+}
+
+// PRESET: initialize starting state for actuators
+void initializeActuators() {
+  pump.run(0);
+  engine.run(0);
+  propane.rotate(75);
+}
+
+// PRESET: engine pre-start
+void prestart(int engineIdle, int pumpIdle, int pumpPhase1, int pumpPhase2) {
+  initializeActuators();
+  engine.run(engineIdle);
+  pump.run(pumpIdle);
+  pump.run(pumpPhase1);
+  delay(3000);
+  pump.run(pumpPhase2);
+}
+
+// PRESET: propane phase
+void propanePhase(int propanePhase1, int propanePhase2, int enginePhase1, int enginePhase2, int delay1, int delay2, int delay3, int delay4) {
+  propane.rotate(propanePhase1);
+  delay(delay1);
+  engine.run(enginePhase1);
+  delay(delay2);
+  propane.rotate(propanePhase2);
+  delay(delay3);
+  engine.run(enginePhase2);
+  delay(delay4);
+
+  int startSpeed = enginePhase2 / 10 * 10;
+  float dt = 100/(80 - startSpeed) * 1000;
+  for (int i = startSpeed; i <= 80; i += 10) {
+    engine.run(i);
+    delay(dt);
+  }
+}
+
+// PRESET: kerosene phase
+void kerosenePhase(int pumpPhase1, int pumpPhase2, int delay1, int engineHoldTime) {
+  pump.run(pumpPhase1);
+  delay(delay1);
+  propane.rotate(75);
+  pump.run(pumpPhase2);
+  delay(engineHoldTime);
 }
