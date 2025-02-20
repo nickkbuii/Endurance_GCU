@@ -166,7 +166,7 @@ void setup() {
 }
 
 void loop() {
-  // Read command from GUI and extract control inputs
+  // Read command from GUI and execute cooresponding action
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
     if (command.startsWith("PUMP:")) {
@@ -181,6 +181,14 @@ void loop() {
     } else if (command.startsWith("PROPANE:")) {
       int angle = command.substring(8).toInt();
       propane.rotate(angle);
+    } else if (command.startsWith("ENGINE_SHUTOFF")) {
+      engineShutoff();
+    } else if (command.startsWith("PRE-START")) {
+      prestart(0, 0, 0, 0);
+    } else if (command.startsWith("PROPANE_PHASE")) {
+      propanePhase(0, 0, 0, 0, 0, 0, 0, 0);
+    } else if (command.startsWith("KEROSENE_PHASE")) {
+      kerosenePhase(0, 0, 0, 0);
     }
   }
 
@@ -190,7 +198,7 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("WEIGHT:" + String(weight.getMassFlowRate()));
+  Serial.println("MASS:" + String(weight.getMassFlowRate()));
   delay(100);
 }
 
