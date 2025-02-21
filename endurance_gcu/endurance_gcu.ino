@@ -191,6 +191,12 @@ void loop() {
       propanePhase(0, 0, 0, 0, 0, 0, 0, 0);
     } else if (command.startsWith("KEROSENE_PHASE")) {
       kerosenePhase(0, 0, 0, 0);
+    } else if (command.startsWith("ALL")) {
+      initializeActuators();
+      prestart(0, 0, 0, 0);
+      propanePhase(0, 0, 0, 0, 0, 0, 0, 0);
+      kerosenePhase(0, 0, 0, 0);
+      engineShutoff();
     }
   }
 

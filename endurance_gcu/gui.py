@@ -147,6 +147,7 @@ def create_preset_buttons(row):
     ttk.Button(button_frame, text="PRE-START", command=lambda: run_preset("PRE-START")).pack(side="left", padx=5)
     ttk.Button(button_frame, text="PROPANE PHASE", command=lambda: run_preset("PROPANE_PHASE")).pack(side="left", padx=5)
     ttk.Button(button_frame, text="ENGINE KEROSENE PHASE", command=lambda: run_preset("KEROSENE_PHASE")).pack(side="left", padx=5)
+    ttk.Button(button_frame, text="RUN PRESET TEST", command=lambda: run_preset("ALL")).pack(side="left", padx=5)
 
 def start_thread():
     global stop_thread
