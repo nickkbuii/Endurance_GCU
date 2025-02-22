@@ -36,7 +36,7 @@ class Pump {
       analogWrite(enA, speed);
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
-      delay(300); // pump spin-up time
+      delay(100);
     }
     
 
@@ -69,7 +69,6 @@ class ServoMotor {
       degrees = constrain(degrees, 0, 180);
       currentAngle = degrees;
       servo.write(degrees);
-      delay(500); // servo rotation time
     }
 
     int getAngle() {
@@ -96,7 +95,7 @@ class Engine {
       currentSpeed = speed;
       speed = (1 + (1.0*speed/100)) * 1000;
       esc.writeMicroseconds(speed);
-      delay(1000); // ESC spin-up time
+      delay(100);
     }
 
     int getSpeed() {
@@ -123,11 +122,7 @@ class Weight {
 
     float getWeight(int sample_size) {
       if (scale.is_ready()) {
-        float sum = 0.0;
-        for (int i = 0; i < sample_size; i++) {
-          sum += scale.get_units();
-        }
-        return sum / sample_size;
+        return scale.get_units(sample_size);
       } else {
         Serial.println("WEIGHT NOT READY");
         return 0;
@@ -157,8 +152,10 @@ Engine engine(7);
 ServoMotor shutoff(8);
 ServoMotor propane(9);
 
+bool shutDown = false;
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(57600);
   pump.start();
   engine.start();
   shutoff.start();
@@ -167,7 +164,6 @@ void setup() {
 }
 
 void loop() {
-
   // Read command from GUI and execute cooresponding action
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
@@ -183,15 +179,9 @@ void loop() {
     } else if (command.startsWith("PROPANE:")) {
       int angle = command.substring(8).toInt();
       propane.rotate(angle);
-    } else if (command.startsWith("ENGINE_SHUTOFF")) {
+    } else if (command.startsWith("ENGINE_SHUTOFF:")) {
       engineShutoff();
-    } else if (command.startsWith("PRE-START")) {
-      prestart(0, 0, 0, 0);
-    } else if (command.startsWith("PROPANE_PHASE")) {
-      propanePhase(0, 0, 0, 0, 0, 0, 0, 0);
-    } else if (command.startsWith("KEROSENE_PHASE")) {
-      kerosenePhase(0, 0, 0, 0);
-    } else if (command.startsWith("ALL")) {
+    } else if (command.startsWith("ALL:")) {
       initializeActuators();
       prestart(0, 0, 0, 0);
       propanePhase(0, 0, 0, 0, 0, 0, 0, 0);
@@ -206,11 +196,12 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("MASS:" + String(weight.getMassFlowRate()));
+  Serial.println("MASS:" + String(weight.getWeight(5)));
   delay(100);
 }
 
 void initializeActuators() {
+  Serial.println("STATUS:INITIALIZING ACTUATORS");
   pump.run(0);
   engine.run(0);
   propane.rotate(75);
@@ -218,36 +209,57 @@ void initializeActuators() {
 
 // PRESET: shutoff engine
 void engineShutoff() {
+  Serial.println("STATUS:SHUTTING OFF ENGINE");
+  shutDown = true;
   propane.rotate(75);
   pump.run(0);
   engine.run(25);
   delay(3000);
+  shutDown = false;
 }
 
 // PRESET: engine pre-start
 void prestart(int engineIdle, int pumpIdle, int pumpPhase1, int pumpPhase2) {
+  Serial.println("STATUS:PRE-START");
+  if (shutDown) return;
   initializeActuators();
+  if (shutDown) return;
   engine.run(engineIdle);
+  if (shutDown) return;
   pump.run(pumpIdle);
+  if (shutDown) return;
   pump.run(pumpPhase1);
+  if (shutDown) return;
   delay(3000);
+  if (shutDown) return;
   pump.run(pumpPhase2);
 }
 
 // PRESET: propane phase
 void propanePhase(int propanePhase1, int propanePhase2, int enginePhase1, int enginePhase2, int delay1, int delay2, int delay3, int delay4) {
+  Serial.println("STATUS:PROPANE-PHASE");
+  if (shutDown) return;
   propane.rotate(propanePhase1);
+  if (shutDown) return;
   delay(delay1);
+  if (shutDown) return;
   engine.run(enginePhase1);
+  if (shutDown) return;  
   delay(delay2);
+  if (shutDown) return;
   propane.rotate(propanePhase2);
+  if (shutDown) return;
   delay(delay3);
+  if (shutDown) return;
   engine.run(enginePhase2);
+  if (shutDown) return;
   delay(delay4);
 
+  if (shutDown) return;
   int startSpeed = enginePhase2 / 10 * 10;
   float dt = 100/(80 - startSpeed) * 1000;
   for (int i = startSpeed; i <= 80; i += 10) {
+    if (shutDown) return;
     engine.run(i);
     delay(dt);
   }
@@ -255,9 +267,15 @@ void propanePhase(int propanePhase1, int propanePhase2, int enginePhase1, int en
 
 // PRESET: kerosene phase
 void kerosenePhase(int pumpPhase1, int pumpPhase2, int delay1, int engineHoldTime) {
+  Serial.println("STATUS:KEROSENE-PHASE");
+  if (shutDown) return;
   pump.run(pumpPhase1);
+  if (shutDown) return;
   delay(delay1);
+  if (shutDown) return;
   propane.rotate(75);
+  if (shutDown) return;
   pump.run(pumpPhase2);
+  if (shutDown) return;
   delay(engineHoldTime);
 }
