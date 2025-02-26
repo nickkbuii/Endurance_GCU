@@ -24,33 +24,32 @@ def read_from_arduino():
             data_entry = [time_counter, None, None, None, None, None, None, None, current_time]
             if line.startswith("TEMP:"):
                 temp = float(line.split(':')[1])
-                therm_label_var.set(f"Thermocouple: {temp}°C")
+                root.after(0, lambda: therm_label_var.set(f"Thermocouple: {temp}°C"))
                 therm_data.append(temp)
                 data_entry[1] = temp
             elif line.startswith("MASS:"):
                 mass = float(line.split(':')[1])
-                mass_label_var.set(f"Mass: {mass} g")
-                # mass_data.append(mass)
+                root.after(0, lambda: mass_label_var.set(f"Mass: {mass} g"))
                 data_entry[2] = mass
             elif line.startswith("PUMP:"):
                 pump_speed = int(line.split(':')[1])
-                pump_label_var.set(f"Pump Speed: {pump_speed}%")
+                root.after(0, lambda: pump_label_var.set(f"Pump Speed: {pump_speed}%"))
                 data_entry[3] = pump_speed
             elif line.startswith("ENGINE:"):
                 engine_speed = int(line.split(':')[1])
-                engine_label_var.set(f"Engine Speed: {engine_speed}%")
+                root.after(0, lambda: engine_label_var.set(f"Engine Speed: {engine_speed}%"))
                 data_entry[4] = engine_speed
             elif line.startswith("SHUTOFF:"):
                 shutoff_angle = int(line.split(':')[1])
-                shutoff_label_var.set(f"Shutoff Angle: {shutoff_angle}°")
+                root.after(0, lambda: shutoff_label_var.set(f"Shutoff Angle: {shutoff_angle}°"))
                 data_entry[5] = shutoff_angle
             elif line.startswith("PROPANE:"):
                 propane_angle = int(line.split(':')[1])
-                propane_label_var.set(f"Propane Angle: {propane_angle}°")
+                root.after(0, lambda: propane_label_var.set(f"Propane Angle: {propane_angle}°"))
                 data_entry[6] = propane_angle
             elif line.startswith("STATUS:"):
                 status = line.split(':')[1]
-                status_label_var.set(f"Status: {status}")
+                root.after(0, lambda: status_label_var.set(f"Status: {status}"))
                 data_entry[7] = status
 
             if any(data_entry[1:]):
@@ -71,7 +70,7 @@ def update_plot():
     canvas.draw()
 
     if not stop_thread:
-        root.after(250, update_plot)
+        root.after(500, update_plot)
 
 def set_pump_speed(val):
     speed = int(val)

@@ -32,11 +32,10 @@ class Pump {
 
     void run(int speed) {
       currentSpeed = speed;
-      speed = (1.0 * speed / 100) * 255;
+      speed = map(speed, 0, 100, 0, 255);
       analogWrite(enA, speed);
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
-      delay(100);
     }
     
 
@@ -93,9 +92,8 @@ class Engine {
 
     void run(int speed) {
       currentSpeed = speed;
-      speed = (1 + (1.0*speed/100)) * 1000;
+      speed = map(speed, 0, 100, 1000, 2000);
       esc.writeMicroseconds(speed);
-      delay(100);
     }
 
     int getSpeed() {
@@ -152,10 +150,16 @@ Engine engine(7);
 ServoMotor shutoff(8);
 ServoMotor propane(9);
 
-bool shutDown = false;
+#define SHUTDOWN_PIN 22
+volatile bool shutDown;
 
 void setup() {
   Serial.begin(57600);
+  shutDown = false;
+
+  pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), engineShutoffISR, FALLING);
+  
   pump.start();
   engine.start();
   shutoff.start();
@@ -163,7 +167,12 @@ void setup() {
   initializeActuators();
 }
 
-void loop() {
+void loop() {  
+  if (shutDown) {
+    Serial.println("Shutting down...");
+    engineShutoff();
+  }
+
   // Read command from GUI and execute cooresponding action
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
@@ -180,12 +189,17 @@ void loop() {
       int angle = command.substring(8).toInt();
       propane.rotate(angle);
     } else if (command.startsWith("ENGINE_SHUTOFF:")) {
+      Serial.println("SHUTOFF PRESET");
       engineShutoff();
     } else if (command.startsWith("ALL:")) {
       initializeActuators();
-      prestart(0, 0, 0, 0);
-      propanePhase(0, 0, 0, 0, 0, 0, 0, 0);
-      kerosenePhase(0, 0, 0, 0);
+      delay(100);
+      prestart(14, 17, 20, 17);
+      delay(100);
+      propanePhase(55, 45, 15, 25, 3000, 5000, 3000, 5000);
+      delay(100);
+      kerosenePhase(18, 18, 3000, 30000);
+      delay(100);
       engineShutoff();
     }
   }
@@ -210,12 +224,9 @@ void initializeActuators() {
 // PRESET: shutoff engine
 void engineShutoff() {
   Serial.println("STATUS:SHUTTING OFF ENGINE");
-  shutDown = true;
   propane.rotate(75);
   pump.run(0);
-  engine.run(25);
-  delay(3000);
-  shutDown = false;
+  engine.run(0);
 }
 
 // PRESET: engine pre-start
@@ -257,8 +268,8 @@ void propanePhase(int propanePhase1, int propanePhase2, int enginePhase1, int en
 
   if (shutDown) return;
   int startSpeed = enginePhase2 / 10 * 10;
-  float dt = 100/(80 - startSpeed) * 1000;
-  for (int i = startSpeed; i <= 80; i += 10) {
+  float dt = 100/(90 - startSpeed) * 1000;
+  for (int i = startSpeed; i <= 90; i += 10) {
     if (shutDown) return;
     engine.run(i);
     delay(dt);
@@ -278,4 +289,10 @@ void kerosenePhase(int pumpPhase1, int pumpPhase2, int delay1, int engineHoldTim
   pump.run(pumpPhase2);
   if (shutDown) return;
   delay(engineHoldTime);
+}
+
+// Interrupt Service Routine
+void engineShutoffISR() {
+    Serial.println("ISR");
+    shutDown = true;
 }
