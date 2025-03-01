@@ -12,7 +12,7 @@ import sys
 from pytz import timezone
 
 # Configure Serial Communication
-arduino = serial.Serial('COM15', 57600, timeout=0.01) ## Nolan's Port: '/dev/cu.usbmodem101'
+arduino = serial.Serial('COM12', 57600, timeout=0.01) ## Nolan's Port: '/dev/cu.usbmodem101'
 
 def read_from_arduino():
     global time_counter
@@ -225,7 +225,7 @@ create_control("Pump Speed:", lambda val: set_pump_speed(val), 0)
 create_control("Engine Speed:", lambda val: set_engine_speed(val), 1)
 create_shutoff_buttons("Shutoff Servo Angle:", 2)
 create_propane_buttons(6)
-create_preset_buttons(7)
+# create_preset_buttons(7)
 ttk.Button(controls_frame, text="Save Data", command=save_data_to_csv, style="Large.TButton").grid(row=8, column=0, columnspan=2, pady=20)
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
