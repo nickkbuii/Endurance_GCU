@@ -119,12 +119,13 @@ class Weight {
     }
 
     float getWeight(int sample_size) {
-      if (scale.is_ready()) {
-        return scale.get_units(sample_size);
-      } else {
-        Serial.println("WEIGHT NOT READY");
-        return 0;
-      }
+      // if (scale.is_ready()) {
+      //   return scale.get_units(sample_size);
+      // } else {
+      //   Serial.println("WEIGHT NOT READY");
+      //   return 0;
+      // }
+      return scale.get_units(sample_size);
     }
 
     float getMassFlowRate() {
