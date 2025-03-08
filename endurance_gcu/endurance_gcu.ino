@@ -119,12 +119,6 @@ class Weight {
     }
 
     float getWeight(int sample_size) {
-      // if (scale.is_ready()) {
-      //   return scale.get_units(sample_size);
-      // } else {
-      //   Serial.println("WEIGHT NOT READY");
-      //   return 0;
-      // }
       return scale.get_units(sample_size);
     }
 
@@ -144,7 +138,7 @@ class Weight {
     unsigned long lastTime;
 };
 
-Weight weight(2, 45, 741.2608696);
+Weight weight(47, 45, 741.2608696);
 Thermocouple therm(3, 10, 13);
 Pump pump(4, 5, 6);
 Engine engine(7);
