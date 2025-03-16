@@ -110,19 +110,19 @@ class Engine {
 class Weight {
   public:
     Weight() {
-      Serial1.begin(9600);
     }
 
     float getWeight() {
-      Serial1.print("W\r");
-      if (Serial1.available() > 0) {
+      Serial2.print("W\r");
+      if (Serial2.available() > 0) {
         String weightData = "";
-        while (Serial1.available()) {
-          char received = Serial1.read();
+        while (Serial2.available()) {
+          char received = Serial2.read();
           weightData += received;
         }
         return extractWeight(weightData);
       }
+      return 0.0;
     }
 
   private:
@@ -147,6 +147,7 @@ ServoMotor propane(9);
 
 void setup() {
   Serial.begin(57600);
+  Serial2.begin(9600);
   pump.start();
   engine.start();
   shutoff.start();
