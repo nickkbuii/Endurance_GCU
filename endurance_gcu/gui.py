@@ -12,7 +12,7 @@ import sys
 from pytz import timezone
 
 # Configure Serial Communication
-arduino = serial.Serial('COM12', 57600, timeout=0.01) ## Nolan's Port: '/dev/cu.usbmodem101'
+arduino = serial.Serial('COM13', 57600, timeout=0.01) ## Nolan's Port: '/dev/cu.usbmodem101'
 
 def read_from_arduino():
     global time_counter
