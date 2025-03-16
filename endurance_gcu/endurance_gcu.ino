@@ -110,6 +110,8 @@ class Engine {
 class Weight {
   public:
     Weight() {
+      lastTime = millis();
+      lastWeight = 0.0;
     }
 
     float getWeight() {
@@ -122,10 +124,23 @@ class Weight {
         }
         return extractWeight(weightData);
       }
-      return 0.0;
+      return -1;
+    }
+
+    float getMassFlowRate() {
+        unsigned long currTime = millis();
+        float currWeight = getWeight();
+        float dW = currWeight - lastWeight;
+        float dT = (currTime - lastTime) / 1000.0;
+        lastTime = currTime;
+        lastWeight = currWeight;
+        return (dT > 0) ? (dW / dT) : 0;
     }
 
   private:
+    unsigned long lastTime;
+    float lastWeight;
+
     float extractWeight(String data) {
       data.trim();
       int spaceIndex = data.indexOf(' ');
@@ -181,6 +196,7 @@ void loop() {
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
   Serial.println("MASS:" + String(weight.getWeight()));
+  Serial.println("MASS FLOW:" + String(weight.getMassFlowRate()));
   delay(100);
 }
 

@@ -87,7 +87,7 @@ def save_data_to_csv():
         with open(filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([
-                "Time (s)", "Temperature (°C)", "Mass Flow Rate (g)",
+                "Time (s)", "Temperature (°C)", "Mass (g)",
                 "Pump Speed (%)", "Engine Speed (%)",
                 "Shutoff Angle (°)", "Propane Angle (°)", "Status", "Timestamp (PST)"
             ])
