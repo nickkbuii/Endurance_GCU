@@ -198,7 +198,6 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("MASS:" + String(weight.getWeight()));
   Serial.println("MASS FLOW:" + String(weight.getMassFlowRate()));
   delay(100);
 }

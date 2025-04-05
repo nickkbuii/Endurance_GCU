@@ -27,10 +27,10 @@ def read_from_arduino():
                 root.after(0, lambda: therm_label_var.set(f"Thermocouple: {temp}°C"))
                 therm_data.append(temp)
                 data_entry[1] = temp
-            elif line.startswith("MASS:"):
-                mass = float(line.split(':')[1])
-                root.after(0, lambda: mass_label_var.set(f"Mass: {mass} g"))
-                data_entry[2] = mass
+            elif line.startswith("MASS FLOW"):
+                massFlow = float(line.split(':')[1])
+                root.after(0, lambda: massFlow_label_var.set(f"Mass Flow Rate: {massFlow} g/s"))
+                data_entry[2] = massFlow
             elif line.startswith("PUMP:"):
                 pump_speed = int(line.split(':')[1])
                 root.after(0, lambda: pump_label_var.set(f"Pump Speed: {pump_speed}%"))
@@ -87,7 +87,7 @@ def save_data_to_csv():
         with open(filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([
-                "Time (s)", "Temperature (°C)", "Mass (g)",
+                "Time (s)", "Temperature (°C)", "Mass Flow Rate (g/s)",
                 "Pump Speed (%)", "Engine Speed (%)",
                 "Shutoff Angle (°)", "Propane Angle (°)", "Status", "Timestamp (PST)"
             ])
@@ -130,17 +130,6 @@ def create_propane_buttons(row):
     ttk.Button(button_frame, text="-10°", width=6, command=lambda: update_propane_angle(-10), style="Large.TButton").pack(side="left", padx=5)
     ttk.Button(button_frame, text="+10°", width=6, command=lambda: update_propane_angle(10), style="Large.TButton").pack(side="left", padx=5)
     ttk.Button(button_frame, text="OFF", width=6, command=lambda: update_propane_angle(-current_propane_angle + 75), style="Large.TButton").pack(side="left", padx=5)
-
-def run_preset(type):
-    arduino.write(f"{type}\n".encode('utf-8'))
-
-def create_preset_buttons(row):
-    ttk.Label(controls_frame, text="Presets:", font=("Arial", 20)).grid(row=row, column=0, sticky="w", padx=10)
-    button_frame = ttk.Frame(controls_frame)
-    button_frame.grid(row=row, column=1, pady=10)
-
-    ttk.Button(button_frame, text="ENGINE SHUT-OFF", command=lambda: run_preset("ENGINE_SHUTOFF:"), style="Large.TButton").pack(side="left", padx=5)
-    ttk.Button(button_frame, text="RUN PRESET TEST", command=lambda: run_preset("ALL:"), style="Large.TButton").pack(side="left", padx=5)
 
 def start_thread():
     global stop_thread
@@ -197,8 +186,8 @@ plot_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
 therm_label_var = tk.StringVar(value="Temperature: N/A")
 ttk.Label(info_frame, textvariable=therm_label_var, font=("Arial", 20)).grid(row=0, column=0, sticky="w", padx=10)
 
-mass_label_var = tk.StringVar(value="Mass: N/A")
-ttk.Label(info_frame, textvariable=mass_label_var, font=("Arial", 20)).grid(row=1, column=0, sticky="w", padx=10)
+massFlow_label_var = tk.StringVar(value="Mass Flow Rate: N/A")
+ttk.Label(info_frame, textvariable=massFlow_label_var, font=("Arial", 20)).grid(row=1, column=0, sticky="w", padx=10)
 
 pump_label_var = tk.StringVar(value="Pump Speed: N/A")
 ttk.Label(info_frame, textvariable=pump_label_var, font=("Arial", 20)).grid(row=2, column=0, sticky="w", padx=10)
@@ -225,7 +214,6 @@ create_control("Pump Speed:", lambda val: set_pump_speed(val), 0)
 create_control("Engine Speed:", lambda val: set_engine_speed(val), 1)
 create_shutoff_buttons("Shutoff Servo Angle:", 2)
 create_propane_buttons(6)
-# create_preset_buttons(7)
 ttk.Button(controls_frame, text="Save Data", command=save_data_to_csv, style="Large.TButton").grid(row=8, column=0, columnspan=2, pady=20)
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
