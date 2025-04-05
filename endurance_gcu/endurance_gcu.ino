@@ -134,7 +134,10 @@ class Weight {
         float dT = (currTime - lastTime) / 1000.0;
         lastTime = currTime;
         lastWeight = currWeight;
-        return (dT > 0) ? (dW / dT) : 0;
+        float flowRate = (dT > 0) ? (dW / dT) : 0;
+        if (abs(flowRate) < 0.1) flowRate = 0;
+        
+        return flowRate;
     }
 
   private:
