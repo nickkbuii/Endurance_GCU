@@ -127,22 +127,31 @@ class Weight {
       return -1;
     }
 
-    float getMassFlowRate() {
+    float getMassFlowRate(int sampleSize) {
         unsigned long currTime = millis();
-        float currWeight = getWeight();
+
+        float sum = 0.0;
+        for (int i = 0; i < sampleSize; i++) sum += getWeight();
+        float currWeight = sum / sampleSize;
+
+        if (currWeight < 0) return lastFlowRate;
         float dW = currWeight - lastWeight;
         float dT = (currTime - lastTime) / 1000.0;
         lastTime = currTime;
         lastWeight = currWeight;
+
         float flowRate = (dT > 0) ? (dW / dT) : 0;
         if (abs(flowRate) < 0.1) flowRate = 0;
-        
-        return flowRate;
+        if (flowRate < 0) return lastFlowRate;
+
+        lastFlowRate = flowRate;
+        return lastFlowRate;
     }
 
   private:
     unsigned long lastTime;
     float lastWeight;
+    float lastFlowRate = 0.0;
 
     float extractWeight(String data) {
       data.trim();
@@ -198,7 +207,7 @@ void loop() {
   Serial.println("ENGINE:" + String(engine.getSpeed()));
   Serial.println("SHUTOFF:" + String(shutoff.getAngle()));
   Serial.println("PROPANE:" + String(propane.getAngle()));
-  Serial.println("MASS FLOW:" + String(weight.getMassFlowRate()));
+  Serial.println("MASS FLOW:" + String(weight.getMassFlowRate(4)));
   delay(100);
 }
 
