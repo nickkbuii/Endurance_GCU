@@ -39,8 +39,6 @@ The GCU software coordinates:
 
 ### 🧩 Arduino Firmware (Embedded GCU)
 
-Located in [`arduino/Endurance_GCU.ino`](arduino/Endurance_GCU.ino)
-
 #### **1. Sensor Interfaces**
 - **Thermocouple** via **MAX6675/MAX31855**  
   - Reads exhaust gas temperature through `Thermocouple` class  
