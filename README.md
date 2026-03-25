@@ -9,7 +9,7 @@
 
 ---
 
-## 🧭 Overview
+## Overview
 
 **ENDURANCE** is a **micro turbojet engine research platform** developed at **Stanford University** for performance, stability, and control experimentation.  
 
@@ -21,7 +21,7 @@ The GCU software coordinates:
 
 ---
 
-## ⚙️ System Architecture
+## System Architecture
 
 | Layer | Platform | Description |
 |--------|-----------|-------------|
@@ -35,9 +35,9 @@ The GCU software coordinates:
 
 ---
 
-## ✅ Implemented Features
+## Implemented Features
 
-### 🧩 Arduino Firmware (Embedded GCU)
+### Arduino Firmware (Embedded GCU)
 
 #### **1. Sensor Interfaces**
 - **Thermocouple** via **MAX6675/MAX31855**  
